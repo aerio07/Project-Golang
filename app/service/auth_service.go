@@ -4,7 +4,6 @@ import (
 	"project_uas/app/repository"
 	"project_uas/database"
 	"project_uas/utils"
-
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -45,9 +44,30 @@ func Login(c *fiber.Ctx) error {
 	}
 
 	// sementara response sukses
-	return c.JSON(fiber.Map{
-		"message":  "login success",
-		"user_id":  user.ID,
-		"role":     user.RoleName,
+	// ambil permissions berdasarkan role
+perms, err := repository.GetPermissionsByRoleID(database.DB, user.RoleID)
+if err != nil {
+	return c.Status(500).JSON(fiber.Map{
+		"message": "failed to load permissions",
 	})
+}
+
+// generate JWT
+token, err := utils.GenerateToken(user.ID, user.RoleName, perms)
+if err != nil {
+	return c.Status(500).JSON(fiber.Map{
+		"message": err.Error(),
+	})
+}
+
+// response FINAL (LOGIN + JWT)
+return c.JSON(fiber.Map{
+	"message":     "login success",
+	"user_id":     user.ID,
+	"role":        user.RoleName,
+	"token":       token,
+	"permissions": perms,
+})
+
+
 }
