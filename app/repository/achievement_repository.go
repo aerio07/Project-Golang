@@ -2,13 +2,14 @@ package repository
 
 import (
 	"project_uas/database"
+
+	"github.com/google/uuid"
 )
 
 // =====================
-// PUBLIC FUNCTIONS
+// READ FUNCTIONS
 // =====================
 
-// Admin → lihat semua achievements
 func GetAllAchievements() ([]map[string]interface{}, error) {
 	query := `
 		SELECT id, student_id, status
@@ -18,7 +19,6 @@ func GetAllAchievements() ([]map[string]interface{}, error) {
 	return fetchAchievements(query)
 }
 
-// Mahasiswa → lihat achievements sendiri
 func GetAchievementsByStudent(userID string) ([]map[string]interface{}, error) {
 	query := `
 		SELECT ar.id, ar.student_id, ar.status
@@ -30,7 +30,6 @@ func GetAchievementsByStudent(userID string) ([]map[string]interface{}, error) {
 	return fetchAchievements(query, userID)
 }
 
-// Dosen Wali → lihat achievements mahasiswa bimbingan
 func GetAchievementsBySupervisor(userID string) ([]map[string]interface{}, error) {
 	query := `
 		SELECT ar.id, ar.student_id, ar.status
@@ -43,10 +42,31 @@ func GetAchievementsBySupervisor(userID string) ([]map[string]interface{}, error
 }
 
 // =====================
+// CREATE FUNCTION
+// =====================
+
+func CreateAchievementReference(studentID string) error {
+	query := `
+		INSERT INTO achievement_references (
+			id, student_id, status
+		) VALUES (
+			$1, $2, 'submitted'
+		)
+	`
+
+	_, err := database.DB.Exec(
+		query,
+		uuid.New().String(),
+		studentID,
+	)
+
+	return err
+}
+
+// =====================
 // INTERNAL HELPER
 // =====================
 
-// helper khusus repository (TIDAK diexport)
 func fetchAchievements(query string, args ...interface{}) ([]map[string]interface{}, error) {
 	rows, err := database.DB.Query(query, args...)
 	if err != nil {

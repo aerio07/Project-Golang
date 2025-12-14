@@ -9,9 +9,7 @@ import (
 
 func AchievementRoutes(app *fiber.App) {
 
-	// =====================
 	// GET achievements
-	// =====================
 	app.Get(
 		"/api/v1/achievements",
 		middleware.JWTMiddleware,
@@ -19,4 +17,11 @@ func AchievementRoutes(app *fiber.App) {
 		service.GetAchievements,
 	)
 
-}	
+	// POST achievements (submit) - Mahasiswa
+	app.Post(
+		"/api/v1/achievements",
+		middleware.JWTMiddleware,
+		middleware.RequirePermission("achievement:create"),
+		service.CreateAchievement,
+	)
+}
