@@ -11,6 +11,10 @@ type CreateAchievementRequest struct {
 	StudentID string `json:"student_id"`
 }
 
+type RejectAchievementRequest struct {
+	Note string `json:"note"`
+}
+
 // =====================
 // GET ACHIEVEMENTS
 // =====================
@@ -85,5 +89,68 @@ func CreateAchievement(c *fiber.Ctx) error {
 
 	return c.Status(201).JSON(fiber.Map{
 		"message": "achievement submitted",
+	})
+}
+
+// =====================
+// VERIFY ACHIEVEMENT
+// =====================
+
+func VerifyAchievement(c *fiber.Ctx) error {
+	token := c.Locals("user").(*jwt.Token)
+	claims := token.Claims.(jwt.MapClaims)
+
+	role := claims["role"].(string)
+	if role != "Dosen Wali" {
+		return c.Status(403).JSON(fiber.Map{
+			"message": "only dosen wali can verify",
+		})
+	}
+
+	achievementID := c.Params("id")
+
+	if err := repository.VerifyAchievement(achievementID); err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"message": "failed to verify achievement",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"message": "achievement verified",
+	})
+}
+
+// =====================
+// REJECT ACHIEVEMENT
+// =====================
+
+func RejectAchievement(c *fiber.Ctx) error {
+	token := c.Locals("user").(*jwt.Token)
+	claims := token.Claims.(jwt.MapClaims)
+
+	role := claims["role"].(string)
+	if role != "Dosen Wali" {
+		return c.Status(403).JSON(fiber.Map{
+			"message": "only dosen wali can reject",
+		})
+	}
+
+	achievementID := c.Params("id")
+
+	var req RejectAchievementRequest
+	if err := c.BodyParser(&req); err != nil || req.Note == "" {
+		return c.Status(400).JSON(fiber.Map{
+			"message": "rejection note is required",
+		})
+	}
+
+	if err := repository.RejectAchievement(achievementID, req.Note); err != nil {
+		return c.Status(500).JSON(fiber.Map{
+			"message": "failed to reject achievement",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"message": "achievement rejected",
 	})
 }

@@ -92,3 +92,28 @@ func fetchAchievements(query string, args ...interface{}) ([]map[string]interfac
 
 	return results, nil
 }
+// VERIFY
+func VerifyAchievement(achievementID string) error {
+	query := `
+		UPDATE achievement_references
+		SET
+			status = 'verified',
+			verified_at = NOW()
+		WHERE id = $1
+	`
+	_, err := database.DB.Exec(query, achievementID)
+	return err
+}
+
+// REJECT
+func RejectAchievement(achievementID string, note string) error {
+	query := `
+		UPDATE achievement_references
+		SET
+			status = 'rejected',
+			rejection_note = $2
+		WHERE id = $1
+	`
+	_, err := database.DB.Exec(query, achievementID, note)
+	return err
+}

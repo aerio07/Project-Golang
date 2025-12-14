@@ -24,4 +24,20 @@ func AchievementRoutes(app *fiber.App) {
 		middleware.RequirePermission("achievement:create"),
 		service.CreateAchievement,
 	)
+
+	// VERIFY achievement (Dosen Wali)
+	app.Post(
+		"/api/v1/achievements/:id/verify",
+		middleware.JWTMiddleware,
+		middleware.RequirePermission("achievement:verify"),
+		service.VerifyAchievement,
+	)
+
+	// REJECT achievement (Dosen Wali)
+	app.Post(
+		"/api/v1/achievements/:id/reject",
+		middleware.JWTMiddleware,
+		middleware.RequirePermission("achievement:verify"),
+		service.RejectAchievement,
+	)
 }
