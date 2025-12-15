@@ -148,3 +148,33 @@ func (r *achievementRepository) fetch(query string, args ...interface{}) ([]mode
 	}
 	return list, nil
 }
+
+// ambil mongo_achievement_id + status + ownership
+func (r *achievementRepository) GetRefForDetail(refID, userID string) (mongoID *string, status string, ok bool, err error) {
+	query := `
+		SELECT ar.mongo_achievement_id, ar.status
+		FROM achievement_references ar
+		JOIN students s ON s.id = ar.student_id
+		WHERE ar.id = $1 AND s.user_id = $2 AND ar.isdelete = false
+	`
+	var mid sql.NullString
+	err = r.db.QueryRow(query, refID, userID).Scan(&mid, &status)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, "", false, nil
+		}
+		return nil, "", false, err
+	}
+	if mid.Valid {
+		return &mid.String, status, true, nil
+	}
+	return nil, status, true, nil
+}
+
+func (r *achievementRepository) SetMongoID(refID string, mongoID string) error {
+	_, err := r.db.Exec(
+		`UPDATE achievement_references SET mongo_achievement_id = $2 WHERE id = $1`,
+		refID, mongoID,
+	)
+	return err
+}

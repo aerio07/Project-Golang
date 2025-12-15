@@ -13,6 +13,8 @@ import (
 func main() {
 	godotenv.Load()
 	database.ConnectPostgres()
+	database.ConnectMongo()
+
 
 	achievementRepo := repository.NewAchievementRepository(database.DB)
 	achievementService := service.NewAchievementService(achievementRepo)
