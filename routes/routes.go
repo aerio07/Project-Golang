@@ -8,8 +8,10 @@ import (
 
 func RegisterRoutes(
 	app *fiber.App,
+	authService *service.AuthService,
 	achievementService *service.AchievementService,
 ) {
-	AuthRoutes(app)
+	AuthRoutes(app, authService)
 	AchievementRoutes(app, achievementService)
 }
+

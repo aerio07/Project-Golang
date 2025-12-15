@@ -1,9 +1,68 @@
 package repository
+
 import (
 	"database/sql"
+	"errors"
+	"project_uas/app/model"
 )
 
-func GetPermissionsByRoleID(db *sql.DB, roleID string) ([]string, error) {
+type AuthRepository interface {
+	GetUserByIdentifier(identifier string) (*model.UserLogin, error)
+	GetPermissionsByRole(roleID string) ([]string, error)
+}
+
+type authRepository struct {
+	db *sql.DB
+}
+
+func NewAuthRepository(db *sql.DB) AuthRepository {
+	return &authRepository{db: db}
+}
+
+// =====================
+// USER
+// =====================
+
+func (r *authRepository) GetUserByIdentifier(identifier string) (*model.UserLogin, error) {
+	query := `
+		SELECT
+			u.id,
+			u.username,
+			u.password_hash,
+			u.role_id,
+			u.is_active,
+			r.name
+		FROM users u
+		JOIN roles r ON r.id = u.role_id
+		WHERE u.username = $1 OR u.email = $1
+		LIMIT 1
+	`
+
+	var user model.UserLogin
+	err := r.db.QueryRow(query, identifier).Scan(
+		&user.ID,
+		&user.Username,
+		&user.PasswordHash,
+		&user.RoleID,
+		&user.IsActive,
+		&user.RoleName,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, errors.New("user not found")
+		}
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+// =====================
+// PERMISSIONS
+// =====================
+
+func (r *authRepository) GetPermissionsByRole(roleID string) ([]string, error) {
 	query := `
 		SELECT p.name
 		FROM role_permissions rp
@@ -12,7 +71,7 @@ func GetPermissionsByRoleID(db *sql.DB, roleID string) ([]string, error) {
 		ORDER BY p.name
 	`
 
-	rows, err := db.Query(query, roleID)
+	rows, err := r.db.Query(query, roleID)
 	if err != nil {
 		return nil, err
 	}

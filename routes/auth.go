@@ -1,10 +1,11 @@
 package routes
 
 import (
-	"github.com/gofiber/fiber/v2"
 	"project_uas/app/service"
+
+	"github.com/gofiber/fiber/v2"
 )
 
-func AuthRoutes(app *fiber.App) {
-	app.Post("/api/v1/auth/login", service.Login)
+func AuthRoutes(app *fiber.App, authService *service.AuthService) {
+	app.Post("/api/v1/auth/login", authService.Login)
 }

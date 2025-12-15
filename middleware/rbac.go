@@ -7,14 +7,16 @@ import (
 
 func RequirePermission(permission string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		token := c.Locals("user").(*jwt.Token)
+		token, ok := c.Locals("user").(*jwt.Token)
+		if !ok {
+			return c.Status(401).JSON(fiber.Map{"message": "unauthorized"})
+		}
+
 		claims := token.Claims.(jwt.MapClaims)
 
 		perms, ok := claims["permissions"].([]interface{})
 		if !ok {
-			return c.Status(403).JSON(fiber.Map{
-				"message": "permissions not found",
-			})
+			return c.Status(403).JSON(fiber.Map{"message": "permissions not found"})
 		}
 
 		for _, p := range perms {
@@ -23,8 +25,6 @@ func RequirePermission(permission string) fiber.Handler {
 			}
 		}
 
-		return c.Status(403).JSON(fiber.Map{
-			"message": "forbidden",
-		})
+		return c.Status(403).JSON(fiber.Map{"message": "forbidden"})
 	}
 }

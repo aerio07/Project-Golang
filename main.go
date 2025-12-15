@@ -16,10 +16,12 @@ func main() {
 
 	achievementRepo := repository.NewAchievementRepository(database.DB)
 	achievementService := service.NewAchievementService(achievementRepo)
+	authRepo := repository.NewAuthRepository(database.DB)
+	authService := service.NewAuthService(authRepo)
 
 	app := fiber.New()
 
-	routes.RegisterRoutes(app, achievementService)
+	routes.RegisterRoutes(app, authService, achievementService)
 
 	app.Listen(":3000")
 }
