@@ -12,16 +12,21 @@ import (
 
 func main() {
 	godotenv.Load()
+
 	database.ConnectPostgres()
 	database.ConnectMongo()
 
-
 	achievementRepo := repository.NewAchievementRepository(database.DB)
-	achievementService := service.NewAchievementService(achievementRepo)
+	achievementMongoRepo := repository.NewAchievementMongoRepository(database.MongoDB)
+	achievementService := service.NewAchievementService(achievementRepo, achievementMongoRepo)
+
 	authRepo := repository.NewAuthRepository(database.DB)
 	authService := service.NewAuthService(authRepo)
 
 	app := fiber.New()
+
+	// serve uploads
+	app.Static("/uploads", "./uploads")
 
 	routes.RegisterRoutes(app, authService, achievementService)
 

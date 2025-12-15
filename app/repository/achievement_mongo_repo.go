@@ -12,10 +12,10 @@ import (
 )
 
 type AchievementMongoRepository interface {
-	Create(detail *model.AchievementMongo) (primitive.ObjectID, error)
-	Update(id primitive.ObjectID, detail map[string]interface{}) error
+	Create(a *model.AchievementMongo) (primitive.ObjectID, error)
 	FindByID(id primitive.ObjectID) (*model.AchievementMongo, error)
-	AddAttachment(id primitive.ObjectID, att model.Attachment) error
+	Update(id primitive.ObjectID, update map[string]interface{}) error
+	AddAttachment(id primitive.ObjectID, attachment model.Attachment) error
 }
 
 type achievementMongoRepository struct {
@@ -28,14 +28,13 @@ func NewAchievementMongoRepository(db *mongo.Database) AchievementMongoRepositor
 	}
 }
 
-// =====================
-// CREATE DETAIL
-// =====================
-func (r *achievementMongoRepository) Create(detail *model.AchievementMongo) (primitive.ObjectID, error) {
-	detail.CreatedAt = time.Now()
-	detail.UpdatedAt = time.Now()
+func (r *achievementMongoRepository) Create(a *model.AchievementMongo) (primitive.ObjectID, error) {
+	now := time.Now()
+	a.CreatedAt = now
+	a.UpdatedAt = now
+	a.Attachments = []model.Attachment{}
 
-	res, err := r.collection.InsertOne(context.Background(), detail)
+	res, err := r.collection.InsertOne(context.Background(), a)
 	if err != nil {
 		return primitive.NilObjectID, err
 	}
@@ -43,23 +42,6 @@ func (r *achievementMongoRepository) Create(detail *model.AchievementMongo) (pri
 	return res.InsertedID.(primitive.ObjectID), nil
 }
 
-// =====================
-// UPDATE DETAIL
-// =====================
-func (r *achievementMongoRepository) Update(id primitive.ObjectID, detail map[string]interface{}) error {
-	detail["updatedAt"] = time.Now()
-
-	_, err := r.collection.UpdateByID(
-		context.Background(),
-		id,
-		bson.M{"$set": detail},
-	)
-	return err
-}
-
-// =====================
-// GET DETAIL
-// =====================
 func (r *achievementMongoRepository) FindByID(id primitive.ObjectID) (*model.AchievementMongo, error) {
 	var result model.AchievementMongo
 	err := r.collection.FindOne(
@@ -67,22 +49,42 @@ func (r *achievementMongoRepository) FindByID(id primitive.ObjectID) (*model.Ach
 		bson.M{"_id": id},
 	).Decode(&result)
 
-	return &result, err
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
 }
 
-// =====================
-// ADD ATTACHMENT
-// =====================
-func (r *achievementMongoRepository) AddAttachment(id primitive.ObjectID, att model.Attachment) error {
-	att.UploadedAt = time.Now()
+func (r *achievementMongoRepository) Update(id primitive.ObjectID, update map[string]interface{}) error {
+	update["updatedAt"] = time.Now()
 
-	_, err := r.collection.UpdateByID(
+	_, err := r.collection.UpdateOne(
 		context.Background(),
-		id,
+		bson.M{"_id": id},
 		bson.M{
-			"$push": bson.M{"attachments": att},
-			"$set":  bson.M{"updatedAt": time.Now()},
+			"$set": update,
 		},
 	)
+
+	return err
+}
+
+func (r *achievementMongoRepository) AddAttachment(id primitive.ObjectID, attachment model.Attachment) error {
+	attachment.UploadedAt = time.Now()
+
+	_, err := r.collection.UpdateOne(
+		context.Background(),
+		bson.M{"_id": id},
+		bson.M{
+			"$push": bson.M{
+				"attachments": attachment,
+			},
+			"$set": bson.M{
+				"updatedAt": time.Now(),
+			},
+		},
+	)
+
 	return err
 }

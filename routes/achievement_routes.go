@@ -7,47 +7,67 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func AchievementRoutes(app *fiber.App, achievementService *service.AchievementService) {
+func AchievementRoutes(app *fiber.App, svc *service.AchievementService) {
 
-	app.Get(
-		"/api/v1/achievements",
+	base := "/api/v1/achievements"
+
+	app.Get(base,
 		middleware.JWTMiddleware,
 		middleware.RequirePermission("achievement:read"),
-		achievementService.GetAchievements,
+		svc.GetAchievements,
 	)
 
-	app.Post(
-		"/api/v1/achievements",
+	app.Get(base+"/:id",
+		middleware.JWTMiddleware,
+		middleware.RequirePermission("achievement:read"),
+		svc.GetAchievementDetail,
+	)
+
+	app.Post(base,
 		middleware.JWTMiddleware,
 		middleware.RequirePermission("achievement:create"),
-		achievementService.CreateAchievement,
+		svc.CreateAchievement,
 	)
 
-	app.Post(
-		"/api/v1/achievements/:id/submit",
+	app.Put(base+"/:id",
 		middleware.JWTMiddleware,
-		middleware.RequirePermission("achievement:create"),
-		achievementService.SubmitAchievement,
+		middleware.RequirePermission("achievement:update"),
+		svc.UpdateAchievement,
 	)
 
-	app.Delete(
-		"/api/v1/achievements/:id",
+	app.Delete(base+"/:id",
 		middleware.JWTMiddleware,
 		middleware.RequirePermission("achievement:delete"),
-		achievementService.DeleteAchievement,
+		svc.DeleteAchievement,
 	)
 
-	app.Post(
-		"/api/v1/achievements/:id/verify",
+	app.Post(base+"/:id/submit",
 		middleware.JWTMiddleware,
-		middleware.RequirePermission("achievement:verify"),
-		achievementService.VerifyAchievement,
+		middleware.RequirePermission("achievement:update"),
+		svc.SubmitAchievement,
 	)
 
-	app.Post(
-		"/api/v1/achievements/:id/reject",
+	app.Post(base+"/:id/verify",
 		middleware.JWTMiddleware,
 		middleware.RequirePermission("achievement:verify"),
-		achievementService.RejectAchievement,
+		svc.VerifyAchievement,
+	)
+
+	app.Post(base+"/:id/reject",
+		middleware.JWTMiddleware,
+		middleware.RequirePermission("achievement:verify"),
+		svc.RejectAchievement,
+	)
+
+	app.Get(base+"/:id/history",
+		middleware.JWTMiddleware,
+		middleware.RequirePermission("achievement:read"),
+		svc.GetAchievementHistory,
+	)
+
+	app.Post(base+"/:id/attachments",
+		middleware.JWTMiddleware,
+		middleware.RequirePermission("achievement:update"),
+		svc.UploadAchievementAttachment,
 	)
 }

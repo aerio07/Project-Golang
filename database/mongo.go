@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"log"
 	"os"
 	"time"
 
@@ -11,15 +12,18 @@ import (
 
 var MongoDB *mongo.Database
 
-func ConnectMongo() error {
+func ConnectMongo() {
+	uri := os.Getenv("MONGO_URI")
+	dbName := os.Getenv("MONGO_DB_NAME")
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(os.Getenv("MONGO_URI")))
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
 	if err != nil {
-		return err
+		log.Fatal("MongoDB connect error:", err)
 	}
 
-	MongoDB = client.Database(os.Getenv("MONGO_DB"))
-	return nil
+	MongoDB = client.Database(dbName)
+	log.Println("MongoDB connected")
 }
