@@ -7,37 +7,47 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func AchievementRoutes(app *fiber.App) {
+func AchievementRoutes(app *fiber.App, achievementService *service.AchievementService) {
 
-	// GET achievements
 	app.Get(
 		"/api/v1/achievements",
 		middleware.JWTMiddleware,
 		middleware.RequirePermission("achievement:read"),
-		service.GetAchievements,
+		achievementService.GetAchievements,
 	)
 
-	// POST achievements (submit) - Mahasiswa
 	app.Post(
 		"/api/v1/achievements",
 		middleware.JWTMiddleware,
 		middleware.RequirePermission("achievement:create"),
-		service.CreateAchievement,
+		achievementService.CreateAchievement,
 	)
 
-	// VERIFY achievement (Dosen Wali)
+	app.Post(
+		"/api/v1/achievements/:id/submit",
+		middleware.JWTMiddleware,
+		middleware.RequirePermission("achievement:create"),
+		achievementService.SubmitAchievement,
+	)
+
+	app.Delete(
+		"/api/v1/achievements/:id",
+		middleware.JWTMiddleware,
+		middleware.RequirePermission("achievement:delete"),
+		achievementService.DeleteAchievement,
+	)
+
 	app.Post(
 		"/api/v1/achievements/:id/verify",
 		middleware.JWTMiddleware,
 		middleware.RequirePermission("achievement:verify"),
-		service.VerifyAchievement,
+		achievementService.VerifyAchievement,
 	)
 
-	// REJECT achievement (Dosen Wali)
 	app.Post(
 		"/api/v1/achievements/:id/reject",
 		middleware.JWTMiddleware,
 		middleware.RequirePermission("achievement:verify"),
-		service.RejectAchievement,
+		achievementService.RejectAchievement,
 	)
 }
