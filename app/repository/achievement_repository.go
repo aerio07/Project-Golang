@@ -6,8 +6,6 @@ import (
 	"time"
 
 	"project_uas/app/model"
-
-	"github.com/google/uuid"
 )
 
 var (
@@ -24,9 +22,8 @@ type AchievementRepository interface {
 	GetStudentIDByUserID(userID string) (string, bool, error)
 	GetStatusByID(refID string) (string, bool, error)
 
-	// create
-	CreateDraft(studentID string) (string, error)
-	SetMongoID(refID string, mongoID string) error
+	// create (SRS-compliant: mongo_achievement_id wajib ada)
+	CreateDraftWithMongo(refID, studentID, mongoID string) error
 
 	// detail access
 	GetRefForDetailStudent(refID, userID string) (*string, string, bool, error)
@@ -37,10 +34,10 @@ type AchievementRepository interface {
 	Submit(id, userID string) error
 	CanDelete(id, userID string) (bool, error)
 	SoftDelete(id string) error
-	Verify(id, verifierID string) error
-	Reject(id, note, rejecterID string) error
+	Verify(id, verifierUserID string) error
+	Reject(id, note, rejecterUserID string) error
 
-	// history (implicit)
+	// history
 	GetImplicitHistory(refID string) ([]model.AchievementHistory, error)
 }
 
@@ -70,17 +67,21 @@ func (r *achievementRepository) GetByStudent(userID string) ([]model.Achievement
 		SELECT ar.id, ar.student_id, ar.status, ar.created_at
 		FROM achievement_references ar
 		JOIN students s ON s.id = ar.student_id
-		WHERE s.user_id = $1 AND ar.status != 'deleted'
+		WHERE s.user_id = $1
+		  AND ar.status != 'deleted'
 		ORDER BY ar.created_at DESC
 	`, userID)
 }
 
+// ✅ FIX DOSEN WALI: filter by lecturers.user_id, bukan s.advisor_id = userID
 func (r *achievementRepository) GetBySupervisor(userID string) ([]model.Achievement, error) {
 	return r.fetch(`
 		SELECT ar.id, ar.student_id, ar.status, ar.created_at
 		FROM achievement_references ar
 		JOIN students s ON s.id = ar.student_id
-		WHERE s.advisor_id = $1 AND ar.status != 'deleted'
+		JOIN lecturers l ON l.id = s.advisor_id
+		WHERE l.user_id = $1
+		  AND ar.status != 'deleted'
 		ORDER BY ar.created_at DESC
 	`, userID)
 }
@@ -113,15 +114,15 @@ func (r *achievementRepository) GetStudentIDByUserID(userID string) (string, boo
 	if err == sql.ErrNoRows {
 		return "", false, nil
 	}
-	return id, err == nil, err
+	if err != nil {
+		return "", false, err
+	}
+	return id, true, nil
 }
 
 func (r *achievementRepository) GetStatusByID(refID string) (string, bool, error) {
 	var status string
-	err := r.db.QueryRow(`
-		SELECT status FROM achievement_references WHERE id=$1
-	`, refID).Scan(&status)
-
+	err := r.db.QueryRow(`SELECT status FROM achievement_references WHERE id=$1`, refID).Scan(&status)
 	if err == sql.ErrNoRows {
 		return "", false, nil
 	}
@@ -131,24 +132,17 @@ func (r *achievementRepository) GetStatusByID(refID string) (string, bool, error
 	return status, true, nil
 }
 
-
 //
-// ===== CREATE =====
+// ===== CREATE (SRS) =====
 //
 
-func (r *achievementRepository) CreateDraft(studentID string) (string, error) {
-	id := uuid.New().String()
+func (r *achievementRepository) CreateDraftWithMongo(refID, studentID, mongoID string) error {
 	_, err := r.db.Exec(`
-		INSERT INTO achievement_references (id, student_id, status, created_at)
-		VALUES ($1, $2, 'draft', NOW())
-	`, id, studentID)
-	return id, err
-}
-
-func (r *achievementRepository) SetMongoID(refID string, mongoID string) error {
-	_, err := r.db.Exec(`
-		UPDATE achievement_references SET mongo_achievement_id=$2 WHERE id=$1
-	`, refID, mongoID)
+		INSERT INTO achievement_references
+			(id, student_id, mongo_achievement_id, status, created_at, updated_at)
+		VALUES
+			($1, $2, $3, 'draft', NOW(), NOW())
+	`, refID, studentID, mongoID)
 	return err
 }
 
@@ -159,14 +153,19 @@ func (r *achievementRepository) SetMongoID(refID string, mongoID string) error {
 func (r *achievementRepository) GetRefForDetailStudent(refID, userID string) (*string, string, bool, error) {
 	return r.getDetail(`
 		JOIN students s ON s.id = ar.student_id
-		WHERE ar.id=$1 AND s.user_id=$2 AND ar.status!='deleted'
+		WHERE ar.id=$1
+		  AND s.user_id=$2
+		  AND ar.status!='deleted'
 	`, refID, userID)
 }
 
 func (r *achievementRepository) GetRefForDetailSupervisor(refID, userID string) (*string, string, bool, error) {
 	return r.getDetail(`
 		JOIN students s ON s.id = ar.student_id
-		WHERE ar.id=$1 AND s.advisor_id=$2 AND ar.status!='deleted'
+		JOIN lecturers l ON l.id = s.advisor_id
+		WHERE ar.id=$1
+		  AND l.user_id=$2
+		  AND ar.status!='deleted'
 	`, refID, userID)
 }
 
@@ -190,6 +189,7 @@ func (r *achievementRepository) getDetail(where string, args ...any) (*string, s
 	if err != nil {
 		return nil, "", false, err
 	}
+
 	if mid.Valid {
 		return &mid.String, status, true, nil
 	}
@@ -203,10 +203,14 @@ func (r *achievementRepository) getDetail(where string, args ...any) (*string, s
 func (r *achievementRepository) Submit(id, userID string) error {
 	res, err := r.db.Exec(`
 		UPDATE achievement_references ar
-		SET status='submitted', submitted_at=NOW()
+		SET status='submitted',
+		    submitted_at=NOW(),
+		    updated_at=NOW()
 		FROM students s
-		WHERE ar.id=$1 AND ar.student_id=s.id
-		  AND s.user_id=$2 AND ar.status='draft'
+		WHERE ar.id=$1
+		  AND ar.student_id=s.id
+		  AND s.user_id=$2
+		  AND ar.status='draft'
 	`, id, userID)
 	if err != nil {
 		return err
@@ -223,7 +227,9 @@ func (r *achievementRepository) CanDelete(id, userID string) (bool, error) {
 		SELECT COUNT(*)
 		FROM achievement_references ar
 		JOIN students s ON s.id=ar.student_id
-		WHERE ar.id=$1 AND s.user_id=$2 AND ar.status='draft'
+		WHERE ar.id=$1
+		  AND s.user_id=$2
+		  AND ar.status='draft'
 	`, id, userID).Scan(&count)
 	return count > 0, err
 }
@@ -231,8 +237,10 @@ func (r *achievementRepository) CanDelete(id, userID string) (bool, error) {
 func (r *achievementRepository) SoftDelete(id string) error {
 	res, err := r.db.Exec(`
 		UPDATE achievement_references
-		SET status='deleted'
-		WHERE id=$1 AND status='draft'
+		SET status='deleted',
+		    updated_at=NOW()
+		WHERE id=$1
+		  AND status='draft'
 	`, id)
 	if err != nil {
 		return err
@@ -248,15 +256,15 @@ func (r *achievementRepository) Verify(id, verifierUserID string) error {
 		UPDATE achievement_references ar
 		SET status='verified',
 		    verified_at=NOW(),
-		    verified_by=$2
+		    verified_by=$2,
+		    updated_at=NOW()
 		FROM students s
 		JOIN lecturers l ON l.id = s.advisor_id
 		WHERE ar.id = $1
 		  AND ar.student_id = s.id
-		  AND l.user_id = $2          -- ✅ BENAR
+		  AND l.user_id = $2
 		  AND ar.status = 'submitted'
 	`, id, verifierUserID)
-
 	if err != nil {
 		return err
 	}
@@ -265,21 +273,20 @@ func (r *achievementRepository) Verify(id, verifierUserID string) error {
 	}
 	return nil
 }
-
 
 func (r *achievementRepository) Reject(id, note, rejecterUserID string) error {
 	res, err := r.db.Exec(`
 		UPDATE achievement_references ar
 		SET status='rejected',
-		    rejection_note=$3
+		    rejection_note=$3,
+		    updated_at=NOW()
 		FROM students s
 		JOIN lecturers l ON l.id = s.advisor_id
 		WHERE ar.id = $1
 		  AND ar.student_id = s.id
-		  AND l.user_id = $2          -- ✅ BENAR
+		  AND l.user_id = $2
 		  AND ar.status = 'submitted'
 	`, id, rejecterUserID, note)
-
 	if err != nil {
 		return err
 	}
@@ -289,9 +296,8 @@ func (r *achievementRepository) Reject(id, note, rejecterUserID string) error {
 	return nil
 }
 
-
 //
-// ===== HISTORY (IMPLICIT) =====
+// ===== HISTORY =====
 //
 
 func (r *achievementRepository) GetImplicitHistory(refID string) ([]model.AchievementHistory, error) {
@@ -306,12 +312,7 @@ func (r *achievementRepository) GetImplicitHistory(refID string) ([]model.Achiev
 		SELECT status, created_at, submitted_at, verified_at
 		FROM achievement_references
 		WHERE id = $1
-	`, refID).Scan(
-		&status,
-		&createdAt,
-		&submittedAt,
-		&verifiedAt,
-	)
+	`, refID).Scan(&status, &createdAt, &submittedAt, &verifiedAt)
 
 	if err == sql.ErrNoRows {
 		return nil, ErrNotFoundOrForbidden
@@ -321,39 +322,20 @@ func (r *achievementRepository) GetImplicitHistory(refID string) ([]model.Achiev
 	}
 
 	history := []model.AchievementHistory{
-		{
-			Status: "draft",
-			At:     createdAt,
-		},
+		{Status: "draft", At: createdAt},
 	}
-
 	if submittedAt.Valid {
-		history = append(history, model.AchievementHistory{
-			Status: "submitted",
-			At:     submittedAt.Time,
-		})
+		history = append(history, model.AchievementHistory{Status: "submitted", At: submittedAt.Time})
 	}
-
 	if status == "verified" && verifiedAt.Valid {
-		history = append(history, model.AchievementHistory{
-			Status: "verified",
-			At:     verifiedAt.Time,
-		})
+		history = append(history, model.AchievementHistory{Status: "verified", At: verifiedAt.Time})
 	}
-
 	if status == "rejected" {
 		at := createdAt
 		if submittedAt.Valid {
 			at = submittedAt.Time
 		}
-
-		history = append(history, model.AchievementHistory{
-			Status: "rejected",
-			At:     at,
-		})
+		history = append(history, model.AchievementHistory{Status: "rejected", At: at})
 	}
-
 	return history, nil
 }
-
-

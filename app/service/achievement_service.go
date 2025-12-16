@@ -1,8 +1,6 @@
 package service
 
 import (
-	
-	
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,11 +19,29 @@ type AchievementService struct {
 	MongoRepo repository.AchievementMongoRepository
 }
 
-func NewAchievementService(
-	repo repository.AchievementRepository,
-	mongoRepo repository.AchievementMongoRepository,
-) *AchievementService {
+func NewAchievementService(repo repository.AchievementRepository, mongoRepo repository.AchievementMongoRepository) *AchievementService {
 	return &AchievementService{Repo: repo, MongoRepo: mongoRepo}
+}
+
+func getRoleAndUserID(c *fiber.Ctx) (role, userID string, ok bool) {
+	u := c.Locals("user")
+	if u == nil {
+		return "", "", false
+	}
+	token, ok := u.(*jwt.Token)
+	if !ok {
+		return "", "", false
+	}
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return "", "", false
+	}
+	r, rok := claims["role"].(string)
+	s, sok := claims["sub"].(string)
+	if !rok || !sok {
+		return "", "", false
+	}
+	return r, s, true
 }
 
 //
@@ -33,11 +49,10 @@ func NewAchievementService(
 //
 
 func (s *AchievementService) GetAchievements(c *fiber.Ctx) error {
-	token := c.Locals("user").(*jwt.Token)
-	claims := token.Claims.(jwt.MapClaims)
-
-	role := claims["role"].(string)
-	userID := claims["sub"].(string)
+	role, userID, ok := getRoleAndUserID(c)
+	if !ok {
+		return c.SendStatus(fiber.StatusUnauthorized)
+	}
 
 	var (
 		data interface{}
@@ -58,12 +73,11 @@ func (s *AchievementService) GetAchievements(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"message": "failed to fetch achievements"})
 	}
-
 	return c.JSON(fiber.Map{"data": data})
 }
 
 //
-// ===== CREATE =====
+// ===== CREATE (SRS: mongo_achievement_id NOT NULL) =====
 //
 
 type achievementUpsertReq struct {
@@ -76,10 +90,11 @@ type achievementUpsertReq struct {
 }
 
 func (s *AchievementService) CreateAchievement(c *fiber.Ctx) error {
-	token := c.Locals("user").(*jwt.Token)
-	claims := token.Claims.(jwt.MapClaims)
-
-	if claims["role"] != "Mahasiswa" {
+	role, userID, ok := getRoleAndUserID(c)
+	if !ok {
+		return c.SendStatus(fiber.StatusUnauthorized)
+	}
+	if role != "Mahasiswa" {
 		return c.SendStatus(fiber.StatusForbidden)
 	}
 
@@ -87,28 +102,21 @@ func (s *AchievementService) CreateAchievement(c *fiber.Ctx) error {
 	if err := c.BodyParser(&body); err != nil {
 		return c.Status(400).JSON(fiber.Map{"message": "invalid body"})
 	}
-
 	if body.AchievementType == "" || body.Title == "" || body.Description == "" {
-		return c.Status(400).JSON(fiber.Map{
-			"message": "achievementType, title, description are required",
-		})
+		return c.Status(400).JSON(fiber.Map{"message": "achievementType, title, description are required"})
 	}
 
-	userID := claims["sub"].(string)
-
-	studentID, ok, err := s.Repo.GetStudentIDByUserID(userID)
+	studentID, ok2, err := s.Repo.GetStudentIDByUserID(userID)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"message": "failed to resolve student"})
 	}
-	if !ok {
+	if !ok2 {
 		return c.Status(404).JSON(fiber.Map{"message": "student not found"})
 	}
 
-	refID, err := s.Repo.CreateDraft(studentID)
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"message": "failed to create draft"})
-	}
+	refID := uuid.New().String()
 
+	// 1) Mongo dulu
 	doc := &model.AchievementMongo{
 		AchievementRefID: refID,
 		StudentID:        studentID,
@@ -125,8 +133,10 @@ func (s *AchievementService) CreateAchievement(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"message": "failed to create detail"})
 	}
 
-	if err := s.Repo.SetMongoID(refID, mongoID.Hex()); err != nil {
-		return c.Status(500).JSON(fiber.Map{"message": "failed to link mongo id"})
+	// 2) Postgres insert dengan mongo id (NOT NULL aman)
+	if err := s.Repo.CreateDraftWithMongo(refID, studentID, mongoID.Hex()); err != nil {
+		_ = s.MongoRepo.Delete(mongoID) // rollback
+		return c.Status(500).JSON(fiber.Map{"message": "failed to create reference"})
 	}
 
 	return c.Status(201).JSON(fiber.Map{
@@ -145,24 +155,23 @@ func (s *AchievementService) CreateAchievement(c *fiber.Ctx) error {
 func (s *AchievementService) GetAchievementDetail(c *fiber.Ctx) error {
 	refID := c.Params("id")
 
-	token := c.Locals("user").(*jwt.Token)
-	claims := token.Claims.(jwt.MapClaims)
-
-	role := claims["role"].(string)
-	userID := claims["sub"].(string)
+	role, userID, ok := getRoleAndUserID(c)
+	if !ok {
+		return c.SendStatus(fiber.StatusUnauthorized)
+	}
 
 	var mongoID *string
 	var status string
-	var ok bool
+	var okRef bool
 	var err error
 
 	switch role {
 	case "Admin":
-		mongoID, status, ok, err = s.Repo.GetRefForDetailAdmin(refID)
+		mongoID, status, okRef, err = s.Repo.GetRefForDetailAdmin(refID)
 	case "Mahasiswa":
-		mongoID, status, ok, err = s.Repo.GetRefForDetailStudent(refID, userID)
+		mongoID, status, okRef, err = s.Repo.GetRefForDetailStudent(refID, userID)
 	case "Dosen Wali":
-		mongoID, status, ok, err = s.Repo.GetRefForDetailSupervisor(refID, userID)
+		mongoID, status, okRef, err = s.Repo.GetRefForDetailSupervisor(refID, userID)
 	default:
 		return c.SendStatus(fiber.StatusForbidden)
 	}
@@ -170,11 +179,15 @@ func (s *AchievementService) GetAchievementDetail(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"message": "failed to fetch reference"})
 	}
-	if !ok || mongoID == nil {
+	if !okRef || mongoID == nil {
 		return c.Status(404).JSON(fiber.Map{"message": "achievement not found"})
 	}
 
-	oid, _ := primitive.ObjectIDFromHex(*mongoID)
+	oid, err := primitive.ObjectIDFromHex(*mongoID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"message": "invalid mongo id"})
+	}
+
 	detail, err := s.MongoRepo.FindByID(oid)
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{"message": "achievement detail not found"})
@@ -196,17 +209,16 @@ func (s *AchievementService) GetAchievementDetail(c *fiber.Ctx) error {
 func (s *AchievementService) UpdateAchievement(c *fiber.Ctx) error {
 	refID := c.Params("id")
 
-	token := c.Locals("user").(*jwt.Token)
-	claims := token.Claims.(jwt.MapClaims)
-
-	if claims["role"] != "Mahasiswa" {
+	role, userID, ok := getRoleAndUserID(c)
+	if !ok {
+		return c.SendStatus(fiber.StatusUnauthorized)
+	}
+	if role != "Mahasiswa" {
 		return c.SendStatus(fiber.StatusForbidden)
 	}
 
-	userID := claims["sub"].(string)
-
-	mongoID, status, ok, err := s.Repo.GetRefForDetailStudent(refID, userID)
-	if err != nil || !ok {
+	mongoID, status, okRef, err := s.Repo.GetRefForDetailStudent(refID, userID)
+	if err != nil || !okRef || mongoID == nil {
 		return c.Status(404).JSON(fiber.Map{"message": "achievement not found"})
 	}
 	if status != "draft" {
@@ -218,7 +230,10 @@ func (s *AchievementService) UpdateAchievement(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"message": "invalid body"})
 	}
 
-	oid, _ := primitive.ObjectIDFromHex(*mongoID)
+	oid, err := primitive.ObjectIDFromHex(*mongoID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"message": "invalid mongo id"})
+	}
 
 	update := map[string]interface{}{
 		"achievementType": body.AchievementType,
@@ -237,27 +252,32 @@ func (s *AchievementService) UpdateAchievement(c *fiber.Ctx) error {
 }
 
 //
-// ===== DELETE =====
+// ===== DELETE (draft only) =====
 //
 
 func (s *AchievementService) DeleteAchievement(c *fiber.Ctx) error {
-	token := c.Locals("user").(*jwt.Token)
-	claims := token.Claims.(jwt.MapClaims)
+	refID := c.Params("id")
 
-	if claims["role"] != "Mahasiswa" {
+	role, userID, ok := getRoleAndUserID(c)
+	if !ok {
+		return c.SendStatus(fiber.StatusUnauthorized)
+	}
+	if role != "Mahasiswa" {
 		return c.SendStatus(fiber.StatusForbidden)
 	}
 
-	refID := c.Params("id")
-	userID := claims["sub"].(string)
-
-	ok, err := s.Repo.CanDelete(refID, userID)
-	if err != nil || !ok {
+	mongoID, status, okRef, err := s.Repo.GetRefForDetailStudent(refID, userID)
+	if err != nil || !okRef || mongoID == nil || status != "draft" {
 		return c.Status(403).JSON(fiber.Map{"message": "achievement cannot be deleted"})
 	}
 
 	if err := s.Repo.SoftDelete(refID); err != nil {
 		return c.Status(500).JSON(fiber.Map{"message": "failed to delete achievement"})
+	}
+
+	// optional: tandai di mongo juga biar konsisten
+	if oid, err := primitive.ObjectIDFromHex(*mongoID); err == nil {
+		_ = s.MongoRepo.Update(oid, map[string]interface{}{"isDeleted": true})
 	}
 
 	return c.JSON(fiber.Map{"message": "achievement deleted"})
@@ -268,20 +288,17 @@ func (s *AchievementService) DeleteAchievement(c *fiber.Ctx) error {
 //
 
 func (s *AchievementService) SubmitAchievement(c *fiber.Ctx) error {
-	token := c.Locals("user").(*jwt.Token)
-	claims := token.Claims.(jwt.MapClaims)
-
-	if claims["role"] != "Mahasiswa" {
+	role, userID, ok := getRoleAndUserID(c)
+	if !ok {
+		return c.SendStatus(fiber.StatusUnauthorized)
+	}
+	if role != "Mahasiswa" {
 		return c.SendStatus(fiber.StatusForbidden)
 	}
 
-	refID := c.Params("id")
-	userID := claims["sub"].(string)
-
-	if err := s.Repo.Submit(refID, userID); err != nil {
+	if err := s.Repo.Submit(c.Params("id"), userID); err != nil {
 		return c.Status(403).JSON(fiber.Map{"message": "cannot submit"})
 	}
-
 	return c.JSON(fiber.Map{"message": "achievement submitted"})
 }
 
@@ -290,25 +307,26 @@ func (s *AchievementService) SubmitAchievement(c *fiber.Ctx) error {
 //
 
 func (s *AchievementService) VerifyAchievement(c *fiber.Ctx) error {
-	token := c.Locals("user").(*jwt.Token)
-	claims := token.Claims.(jwt.MapClaims)
-
-	if claims["role"] != "Dosen Wali" {
+	role, userID, ok := getRoleAndUserID(c)
+	if !ok {
+		return c.SendStatus(fiber.StatusUnauthorized)
+	}
+	if role != "Dosen Wali" {
 		return c.SendStatus(fiber.StatusForbidden)
 	}
 
-	if err := s.Repo.Verify(c.Params("id"), claims["sub"].(string)); err != nil {
+	if err := s.Repo.Verify(c.Params("id"), userID); err != nil {
 		return c.Status(403).JSON(fiber.Map{"message": "cannot verify"})
 	}
-
 	return c.JSON(fiber.Map{"message": "achievement verified"})
 }
 
 func (s *AchievementService) RejectAchievement(c *fiber.Ctx) error {
-	token := c.Locals("user").(*jwt.Token)
-	claims := token.Claims.(jwt.MapClaims)
-
-	if claims["role"] != "Dosen Wali" {
+	role, userID, ok := getRoleAndUserID(c)
+	if !ok {
+		return c.SendStatus(fiber.StatusUnauthorized)
+	}
+	if role != "Dosen Wali" {
 		return c.SendStatus(fiber.StatusForbidden)
 	}
 
@@ -319,38 +337,30 @@ func (s *AchievementService) RejectAchievement(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"message": "note is required"})
 	}
 
-	if err := s.Repo.Reject(c.Params("id"), body.Note, claims["sub"].(string)); err != nil {
+	if err := s.Repo.Reject(c.Params("id"), body.Note, userID); err != nil {
 		return c.Status(403).JSON(fiber.Map{"message": "cannot reject"})
 	}
-
 	return c.JSON(fiber.Map{"message": "achievement rejected"})
 }
 
 //
-// ===== HISTORY (IMPLICIT) =====
+// ===== HISTORY =====
 //
 
 func (s *AchievementService) GetAchievementHistory(c *fiber.Ctx) error {
 	refID := c.Params("id")
 
-	// cukup cek apakah ID ada (TIDAK peduli deleted atau tidak)
 	status, ok, err := s.Repo.GetStatusByID(refID)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{
-			"message": "failed to fetch achievement",
-		})
+		return c.Status(500).JSON(fiber.Map{"message": "failed to fetch achievement"})
 	}
 	if !ok {
-		return c.Status(404).JSON(fiber.Map{
-			"message": "achievement not found",
-		})
+		return c.Status(404).JSON(fiber.Map{"message": "achievement not found"})
 	}
 
 	history, err := s.Repo.GetImplicitHistory(refID)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{
-			"message": "failed to fetch history",
-		})
+		return c.Status(500).JSON(fiber.Map{"message": "failed to fetch history"})
 	}
 
 	return c.JSON(fiber.Map{
@@ -368,17 +378,16 @@ func (s *AchievementService) GetAchievementHistory(c *fiber.Ctx) error {
 func (s *AchievementService) UploadAchievementAttachment(c *fiber.Ctx) error {
 	refID := c.Params("id")
 
-	token := c.Locals("user").(*jwt.Token)
-	claims := token.Claims.(jwt.MapClaims)
-
-	if claims["role"] != "Mahasiswa" {
+	role, userID, ok := getRoleAndUserID(c)
+	if !ok {
+		return c.SendStatus(fiber.StatusUnauthorized)
+	}
+	if role != "Mahasiswa" {
 		return c.SendStatus(fiber.StatusForbidden)
 	}
 
-	userID := claims["sub"].(string)
-
-	mongoID, status, ok, err := s.Repo.GetRefForDetailStudent(refID, userID)
-	if err != nil || !ok {
+	mongoID, status, okRef, err := s.Repo.GetRefForDetailStudent(refID, userID)
+	if err != nil || !okRef || mongoID == nil {
 		return c.Status(404).JSON(fiber.Map{"message": "achievement not found"})
 	}
 	if status != "draft" {
@@ -390,7 +399,6 @@ func (s *AchievementService) UploadAchievementAttachment(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"message": "file is required"})
 	}
 
-	// save file
 	dir := filepath.Join("uploads", "achievements", refID)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return c.Status(500).JSON(fiber.Map{"message": "failed to prepare directory"})
@@ -405,7 +413,10 @@ func (s *AchievementService) UploadAchievementAttachment(c *fiber.Ctx) error {
 
 	fileURL := "/" + filepath.ToSlash(path)
 
-	oid, _ := primitive.ObjectIDFromHex(*mongoID)
+	oid, err := primitive.ObjectIDFromHex(*mongoID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"message": "invalid mongo id"})
+	}
 
 	attachment := model.Attachment{
 		FileName: filename,
@@ -417,7 +428,5 @@ func (s *AchievementService) UploadAchievementAttachment(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"message": "failed to attach file"})
 	}
 
-	return c.Status(201).JSON(fiber.Map{
-		"data": attachment,
-	})
+	return c.Status(201).JSON(fiber.Map{"data": attachment})
 }
