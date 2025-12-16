@@ -243,14 +243,20 @@ func (r *achievementRepository) SoftDelete(id string) error {
 	return nil
 }
 
-func (r *achievementRepository) Verify(id, verifierID string) error {
+func (r *achievementRepository) Verify(id, verifierUserID string) error {
 	res, err := r.db.Exec(`
 		UPDATE achievement_references ar
-		SET status='verified', verified_at=NOW(), verified_by=$2
+		SET status='verified',
+		    verified_at=NOW(),
+		    verified_by=$2
 		FROM students s
-		WHERE ar.id=$1 AND ar.student_id=s.id
-		  AND s.advisor_id=$2 AND ar.status='submitted'
-	`, id, verifierID)
+		JOIN lecturers l ON l.id = s.advisor_id
+		WHERE ar.id = $1
+		  AND ar.student_id = s.id
+		  AND l.user_id = $2          -- ✅ BENAR
+		  AND ar.status = 'submitted'
+	`, id, verifierUserID)
+
 	if err != nil {
 		return err
 	}
@@ -260,14 +266,20 @@ func (r *achievementRepository) Verify(id, verifierID string) error {
 	return nil
 }
 
-func (r *achievementRepository) Reject(id, note, rejecterID string) error {
+
+func (r *achievementRepository) Reject(id, note, rejecterUserID string) error {
 	res, err := r.db.Exec(`
 		UPDATE achievement_references ar
-		SET status='rejected', rejection_note=$3
+		SET status='rejected',
+		    rejection_note=$3
 		FROM students s
-		WHERE ar.id=$1 AND ar.student_id=s.id
-		  AND s.advisor_id=$2 AND ar.status='submitted'
-	`, id, rejecterID, note)
+		JOIN lecturers l ON l.id = s.advisor_id
+		WHERE ar.id = $1
+		  AND ar.student_id = s.id
+		  AND l.user_id = $2          -- ✅ BENAR
+		  AND ar.status = 'submitted'
+	`, id, rejecterUserID, note)
+
 	if err != nil {
 		return err
 	}
@@ -276,6 +288,7 @@ func (r *achievementRepository) Reject(id, note, rejecterID string) error {
 	}
 	return nil
 }
+
 
 //
 // ===== HISTORY (IMPLICIT) =====
