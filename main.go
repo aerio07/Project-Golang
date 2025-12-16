@@ -12,7 +12,8 @@ import (
 
 func main() {
 	godotenv.Load()
-
+	app := fiber.New()
+	
 	database.ConnectPostgres()
 	database.ConnectMongo()
 
@@ -23,12 +24,25 @@ func main() {
 	authRepo := repository.NewAuthRepository(database.DB)
 	authService := service.NewAuthService(authRepo)
 
-	app := fiber.New()
+	userRepo := repository.NewUserRepository(database.DB)
+userService := service.NewUserService(userRepo)
+
+studentRepo := repository.NewStudentRepository(database.DB)
+studentService := service.NewStudentService(studentRepo)
+
+lecturerRepo := repository.NewLecturerRepository(database.DB)
+lecturerService := service.NewLecturerService(lecturerRepo)
+
+reportMongoRepo := repository.NewReportMongoRepository(database.MongoDB)
+reportService := service.NewReportService(studentRepo, lecturerRepo, reportMongoRepo)
+
+routes.RegisterRoutes(app, authService, achievementService, userService, studentService, lecturerService, reportService)
+
+
 
 	// serve uploads
 	app.Static("/uploads", "./uploads")
 
-	routes.RegisterRoutes(app, authService, achievementService)
 
 	app.Listen(":3000")
 }
