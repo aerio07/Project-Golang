@@ -48,6 +48,17 @@ func getRoleAndUserID(c *fiber.Ctx) (role, userID string, ok bool) {
 // ===== LIST =====
 //
 
+// GetAchievements godoc
+// @Summary List achievements
+// @Description Admin: semua. Mahasiswa: miliknya. Dosen Wali: mahasiswa bimbingan.
+// @Tags Achievements
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} model.AchievementListResponse
+// @Failure 401 {object} model.ErrorResponse
+// @Failure 403 {object} model.ErrorResponse
+// @Failure 500 {object} model.ErrorResponse
+// @Router /achievements [get]
 func (s *AchievementService) GetAchievements(c *fiber.Ctx) error {
 	role, userID, ok := getRoleAndUserID(c)
 	if !ok {
@@ -80,15 +91,21 @@ func (s *AchievementService) GetAchievements(c *fiber.Ctx) error {
 // ===== CREATE (SRS: mongo_achievement_id NOT NULL) =====
 //
 
-type achievementUpsertReq struct {
-	AchievementType string                 `json:"achievementType"`
-	Title           string                 `json:"title"`
-	Description     string                 `json:"description"`
-	Details         map[string]interface{} `json:"details"`
-	Tags            []string               `json:"tags"`
-	Points          int                    `json:"points"`
-}
-
+// CreateAchievement godoc
+// @Summary Create achievement (draft)
+// @Description Mahasiswa membuat prestasi -> draft. Mongo dibuat dulu lalu Postgres reference dibuat.
+// @Tags Achievements
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param body body model.AchievementUpsertRequest true "Create payload"
+// @Success 201 {object} model.AchievementCreateResponse
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 401 {object} model.ErrorResponse
+// @Failure 403 {object} model.ErrorResponse
+// @Failure 404 {object} model.ErrorResponse
+// @Failure 500 {object} model.ErrorResponse
+// @Router /achievements [post]
 func (s *AchievementService) CreateAchievement(c *fiber.Ctx) error {
 	role, userID, ok := getRoleAndUserID(c)
 	if !ok {
@@ -98,7 +115,7 @@ func (s *AchievementService) CreateAchievement(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusForbidden)
 	}
 
-	var body achievementUpsertReq
+	var body model.AchievementUpsertRequest
 	if err := c.BodyParser(&body); err != nil {
 		return c.Status(400).JSON(fiber.Map{"message": "invalid body"})
 	}
@@ -152,6 +169,18 @@ func (s *AchievementService) CreateAchievement(c *fiber.Ctx) error {
 // ===== DETAIL =====
 //
 
+// GetAchievementDetail godoc
+// @Summary Get achievement detail
+// @Tags Achievements
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Achievement ID"
+// @Success 200 {object} model.AchievementDetailResponse
+// @Failure 401 {object} model.ErrorResponse
+// @Failure 403 {object} model.ErrorResponse
+// @Failure 404 {object} model.ErrorResponse
+// @Failure 500 {object} model.ErrorResponse
+// @Router /achievements/{id} [get]
 func (s *AchievementService) GetAchievementDetail(c *fiber.Ctx) error {
 	refID := c.Params("id")
 
@@ -206,6 +235,22 @@ func (s *AchievementService) GetAchievementDetail(c *fiber.Ctx) error {
 // ===== UPDATE (DRAFT) =====
 //
 
+// UpdateAchievement godoc
+// @Summary Update achievement (draft only)
+// @Tags Achievements
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "Achievement ID"
+// @Param body body model.AchievementUpsertRequest true "Update payload"
+// @Success 200 {object} model.MessageResponse
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 401 {object} model.ErrorResponse
+// @Failure 403 {object} model.ErrorResponse
+// @Failure 404 {object} model.ErrorResponse
+// @Failure 422 {object} model.ErrorResponse
+// @Failure 500 {object} model.ErrorResponse
+// @Router /achievements/{id} [put]
 func (s *AchievementService) UpdateAchievement(c *fiber.Ctx) error {
 	refID := c.Params("id")
 
@@ -225,7 +270,7 @@ func (s *AchievementService) UpdateAchievement(c *fiber.Ctx) error {
 		return c.Status(422).JSON(fiber.Map{"message": "only draft can be updated"})
 	}
 
-	var body achievementUpsertReq
+	var body model.AchievementUpsertRequest
 	if err := c.BodyParser(&body); err != nil {
 		return c.Status(400).JSON(fiber.Map{"message": "invalid body"})
 	}
@@ -255,6 +300,17 @@ func (s *AchievementService) UpdateAchievement(c *fiber.Ctx) error {
 // ===== DELETE (draft only) =====
 //
 
+// DeleteAchievement godoc
+// @Summary Delete achievement (draft only, soft delete)
+// @Tags Achievements
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Achievement ID"
+// @Success 200 {object} model.MessageResponse
+// @Failure 401 {object} model.ErrorResponse
+// @Failure 403 {object} model.ErrorResponse
+// @Failure 500 {object} model.ErrorResponse
+// @Router /achievements/{id} [delete]
 func (s *AchievementService) DeleteAchievement(c *fiber.Ctx) error {
 	refID := c.Params("id")
 
@@ -287,6 +343,16 @@ func (s *AchievementService) DeleteAchievement(c *fiber.Ctx) error {
 // ===== SUBMIT =====
 //
 
+// SubmitAchievement godoc
+// @Summary Submit achievement (draft -> submitted)
+// @Tags Achievements
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Achievement ID"
+// @Success 200 {object} model.MessageResponse
+// @Failure 401 {object} model.ErrorResponse
+// @Failure 403 {object} model.ErrorResponse
+// @Router /achievements/{id}/submit [post]
 func (s *AchievementService) SubmitAchievement(c *fiber.Ctx) error {
 	role, userID, ok := getRoleAndUserID(c)
 	if !ok {
@@ -306,6 +372,16 @@ func (s *AchievementService) SubmitAchievement(c *fiber.Ctx) error {
 // ===== VERIFY / REJECT =====
 //
 
+// VerifyAchievement godoc
+// @Summary Verify achievement (submitted -> verified)
+// @Tags Achievements
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Achievement ID"
+// @Success 200 {object} model.MessageResponse
+// @Failure 401 {object} model.ErrorResponse
+// @Failure 403 {object} model.ErrorResponse
+// @Router /achievements/{id}/verify [post]
 func (s *AchievementService) VerifyAchievement(c *fiber.Ctx) error {
 	role, userID, ok := getRoleAndUserID(c)
 	if !ok {
@@ -321,6 +397,19 @@ func (s *AchievementService) VerifyAchievement(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "achievement verified"})
 }
 
+// RejectAchievement godoc
+// @Summary Reject achievement (submitted -> rejected)
+// @Tags Achievements
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "Achievement ID"
+// @Param body body model.AchievementRejectRequest true "Reject payload"
+// @Success 200 {object} model.MessageResponse
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 401 {object} model.ErrorResponse
+// @Failure 403 {object} model.ErrorResponse
+// @Router /achievements/{id}/reject [post]
 func (s *AchievementService) RejectAchievement(c *fiber.Ctx) error {
 	role, userID, ok := getRoleAndUserID(c)
 	if !ok {
@@ -330,9 +419,7 @@ func (s *AchievementService) RejectAchievement(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusForbidden)
 	}
 
-	var body struct {
-		Note string `json:"note"`
-	}
+	var body model.AchievementRejectRequest
 	if err := c.BodyParser(&body); err != nil || strings.TrimSpace(body.Note) == "" {
 		return c.Status(400).JSON(fiber.Map{"message": "note is required"})
 	}
@@ -347,6 +434,17 @@ func (s *AchievementService) RejectAchievement(c *fiber.Ctx) error {
 // ===== HISTORY =====
 //
 
+// GetAchievementHistory godoc
+// @Summary Get achievement history (implicit)
+// @Tags Achievements
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Achievement ID"
+// @Success 200 {object} model.AchievementHistoryResponse
+// @Failure 401 {object} model.ErrorResponse
+// @Failure 404 {object} model.ErrorResponse
+// @Failure 500 {object} model.ErrorResponse
+// @Router /achievements/{id}/history [get]
 func (s *AchievementService) GetAchievementHistory(c *fiber.Ctx) error {
 	refID := c.Params("id")
 
@@ -375,6 +473,22 @@ func (s *AchievementService) GetAchievementHistory(c *fiber.Ctx) error {
 // ===== UPLOAD ATTACHMENT (DRAFT ONLY) =====
 //
 
+// UploadAchievementAttachment godoc
+// @Summary Upload attachment (draft only)
+// @Tags Achievements
+// @Security BearerAuth
+// @Accept multipart/form-data
+// @Produce json
+// @Param id path string true "Achievement ID"
+// @Param file formData file true "Attachment file"
+// @Success 201 {object} model.AttachmentResponse
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 401 {object} model.ErrorResponse
+// @Failure 403 {object} model.ErrorResponse
+// @Failure 404 {object} model.ErrorResponse
+// @Failure 422 {object} model.ErrorResponse
+// @Failure 500 {object} model.ErrorResponse
+// @Router /achievements/{id}/attachments [post]
 func (s *AchievementService) UploadAchievementAttachment(c *fiber.Ctx) error {
 	refID := c.Params("id")
 

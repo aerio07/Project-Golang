@@ -16,6 +16,18 @@ func NewStudentService(repo repository.StudentRepository) *StudentService {
 	return &StudentService{Repo: repo}
 }
 
+// GetStudents godoc
+// @Summary List students
+// @Description Ambil daftar mahasiswa (pagination)
+// @Tags Students
+// @Security BearerAuth
+// @Produce json
+// @Param limit query int false "Limit" default(50)
+// @Param offset query int false "Offset" default(0)
+// @Success 200 {object} model.StudentListResponse
+// @Failure 401 {object} model.AuthUnauthorizedResponse
+// @Failure 500 {object} model.ErrorResponse
+// @Router /students [get]
 func (s *StudentService) GetStudents(c *fiber.Ctx) error {
 	limit := c.QueryInt("limit", 50)
 	offset := c.QueryInt("offset", 0)
@@ -27,8 +39,21 @@ func (s *StudentService) GetStudents(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"data": data})
 }
 
+// GetStudent godoc
+// @Summary Get student detail
+// @Description Ambil detail mahasiswa by id
+// @Tags Students
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Student ID (uuid)"
+// @Success 200 {object} model.StudentDetailResponse
+// @Failure 401 {object} model.AuthUnauthorizedResponse
+// @Failure 404 {object} model.ErrorResponse
+// @Failure 500 {object} model.ErrorResponse
+// @Router /students/{id} [get]
 func (s *StudentService) GetStudent(c *fiber.Ctx) error {
 	id := c.Params("id")
+
 	st, ok, err := s.Repo.GetByID(id)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"message": "failed to fetch student"})
@@ -39,6 +64,19 @@ func (s *StudentService) GetStudent(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"data": st})
 }
 
+// GetStudentAchievements godoc
+// @Summary List student achievements
+// @Description Ambil list prestasi milik student by studentId (uuid)
+// @Tags Students
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Student ID (uuid)"
+// @Param limit query int false "Limit" default(50)
+// @Param offset query int false "Offset" default(0)
+// @Success 200 {object} model.StudentAchievementListResponse
+// @Failure 401 {object} model.AuthUnauthorizedResponse
+// @Failure 500 {object} model.ErrorResponse
+// @Router /students/{id}/achievements [get]
 func (s *StudentService) GetStudentAchievements(c *fiber.Ctx) error {
 	studentID := c.Params("id")
 	limit := c.QueryInt("limit", 50)
@@ -55,6 +93,20 @@ type setAdvisorReq struct {
 	AdvisorID string `json:"advisor_id"` // lecturers.id (uuid)
 }
 
+// SetAdvisor godoc
+// @Summary Set student advisor
+// @Description Set dosen wali untuk mahasiswa (advisor_id = lecturers.id)
+// @Tags Students
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "Student ID (uuid)"
+// @Param body body model.StudentSetAdvisorRequest true "Request body"
+// @Success 200 {object} model.MessageResponse
+// @Failure 400 {object} model.ErrorResponse
+// @Failure 401 {object} model.AuthUnauthorizedResponse
+// @Failure 500 {object} model.ErrorResponse
+// @Router /students/{id}/advisor [put]
 func (s *StudentService) SetAdvisor(c *fiber.Ctx) error {
 	studentID := c.Params("id")
 
@@ -66,5 +118,6 @@ func (s *StudentService) SetAdvisor(c *fiber.Ctx) error {
 	if err := s.Repo.SetAdvisor(studentID, strings.TrimSpace(body.AdvisorID)); err != nil {
 		return c.Status(500).JSON(fiber.Map{"message": "failed to set advisor"})
 	}
+
 	return c.JSON(fiber.Map{"message": "advisor updated"})
 }

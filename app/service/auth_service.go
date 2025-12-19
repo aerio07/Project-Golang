@@ -19,10 +19,19 @@ func NewAuthService(repo repository.AuthRepository) *AuthService {
 	return &AuthService{Repo: repo}
 }
 
-// =====================
-// LOGIN (SRS)
-// =====================
-
+// Login godoc
+// @Summary Login
+// @Description Login pakai username atau email + password, return access token + refresh token
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param body body model.LoginRequest true "Login payload"
+// @Success 200 {object} model.LoginResponse
+// @Failure 400 {object} model.AuthErrorResponse
+// @Failure 401 {object} model.AuthErrorResponse
+// @Failure 403 {object} model.AuthErrorResponse
+// @Failure 500 {object} model.AuthErrorResponse
+// @Router /auth/login [post]
 func (s *AuthService) Login(c *fiber.Ctx) error {
 	var req model.LoginRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -78,10 +87,19 @@ func (s *AuthService) Login(c *fiber.Ctx) error {
 	return c.JSON(resp)
 }
 
-// =====================
-// REFRESH (stateless)
-// =====================
-
+// Refresh godoc
+// @Summary Refresh token
+// @Description Tukar refresh token jadi access token baru + refresh token baru (stateless)
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param body body model.RefreshRequest true "Refresh payload"
+// @Success 200 {object} model.RefreshResponse
+// @Failure 400 {object} model.AuthErrorResponse
+// @Failure 401 {object} model.AuthErrorResponse
+// @Failure 403 {object} model.AuthErrorResponse
+// @Failure 500 {object} model.AuthErrorResponse
+// @Router /auth/refresh [post]
 func (s *AuthService) Refresh(c *fiber.Ctx) error {
 	var req model.RefreshRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -134,23 +152,33 @@ func (s *AuthService) Refresh(c *fiber.Ctx) error {
 	})
 }
 
-// =====================
-// LOGOUT (stateless)
-// =====================
-
+// Logout godoc
+// @Summary Logout
+// @Description Stateless logout (server tidak revoke token). Client wajib hapus token.
+// @Tags Auth
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} model.LogoutResponse
+// @Failure 401 {object} model.AuthUnauthorizedResponse
+// @Router /auth/logout [post]
 func (s *AuthService) Logout(c *fiber.Ctx) error {
-	// Karena stateless: server tidak revoke token.
-	// Client WAJIB hapus token yang tersimpan.
 	return c.JSON(model.LogoutResponse{
 		Status: "success",
 		Data:   model.LogoutResponseData{Message: "logout success"},
 	})
 }
 
-// =====================
-// PROFILE (pakai access token)
-// =====================
-
+// Profile godoc
+// @Summary Get current profile
+// @Description Ambil data user dari access token (Bearer)
+// @Tags Auth
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} model.ProfileResponse
+// @Failure 401 {object} model.AuthUnauthorizedResponse
+// @Failure 404 {object} model.AuthErrorResponse
+// @Failure 500 {object} model.AuthErrorResponse
+// @Router /auth/profile [get]
 func (s *AuthService) Profile(c *fiber.Ctx) error {
 	tokAny := c.Locals("user")
 	token, ok := tokAny.(*jwt.Token)

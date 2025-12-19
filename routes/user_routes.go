@@ -8,41 +8,41 @@ import (
 )
 
 func UserRoutes(app *fiber.App, svc *service.UserService) {
-	base := "/api/v1/users"
+    base := "/api/v1/users"
 
-	app.Get(base,
-		middleware.JWTMiddleware,
-		middleware.RequirePermission("user:read"),
-		svc.GetUsers,
-	)
+    app.Get(base,
+        middleware.JWTMiddleware,
+        middleware.RequirePermission("user:manage"),
+        svc.GetUsers,
+    )
 
-	app.Get(base+"/:id",
-		middleware.JWTMiddleware,
-		middleware.RequirePermission("user:read"),
-		svc.GetUser,
-	)
+    app.Get(base+"/:id",
+        middleware.JWTMiddleware,
+        middleware.RequirePermission("user:manage"),
+        svc.GetUser,
+    )
 
-	app.Post(base,
-		middleware.JWTMiddleware,
-		middleware.RequirePermission("user:create"),
-		svc.CreateUser,
-	)
+    app.Post(base,
+        middleware.JWTMiddleware,
+        middleware.RequirePermission("user:manage"),
+        svc.CreateUser,
+    )
 
-	app.Put(base+"/:id",
-		middleware.JWTMiddleware,
-		middleware.RequirePermission("user:update"),
-		svc.UpdateUser,
-	)
+    app.Put(base+"/:id",
+        middleware.JWTMiddleware,
+        middleware.RequirePermission("user:manage"),
+        svc.UpdateUser,
+    )
 
-	app.Delete(base+"/:id",
-		middleware.JWTMiddleware,
-		middleware.RequirePermission("user:delete"),
-		svc.DeleteUser,
-	)
+    app.Delete(base+"/:id",
+        middleware.JWTMiddleware,
+        middleware.RequirePermission("user:manage"),
+        svc.DeleteUser,
+    )
 
-	app.Put(base+"/:id/role",
-		middleware.JWTMiddleware,
-		middleware.RequirePermission("user:assign_role"),
-		svc.AssignRole,
-	)
+    app.Put(base+"/:id/role",
+        middleware.JWTMiddleware,
+        middleware.RequirePermission("user:manage"),
+        svc.AssignRole,
+    )
 }

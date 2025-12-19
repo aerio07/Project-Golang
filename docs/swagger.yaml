@@ -1,0 +1,1524 @@
+basePath: /api/v1
+definitions:
+  model.Achievement:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      status:
+        type: string
+      student_id:
+        type: string
+    type: object
+  model.AchievementCreateResponse:
+    properties:
+      data:
+        properties:
+          detail:
+            $ref: '#/definitions/model.AchievementMongo'
+          id:
+            example: 550e8400-e29b-41d4-a716-446655440000
+            type: string
+          status:
+            example: draft
+            type: string
+        type: object
+    type: object
+  model.AchievementDetailResponse:
+    properties:
+      data:
+        properties:
+          detail:
+            $ref: '#/definitions/model.AchievementMongo'
+          id:
+            example: 550e8400-e29b-41d4-a716-446655440000
+            type: string
+          status:
+            example: draft
+            type: string
+        type: object
+    type: object
+  model.AchievementHistory:
+    properties:
+      at:
+        type: string
+      status:
+        type: string
+    type: object
+  model.AchievementHistoryResponse:
+    properties:
+      data:
+        properties:
+          currentStatus:
+            example: submitted
+            type: string
+          history:
+            items:
+              $ref: '#/definitions/model.AchievementHistory'
+            type: array
+        type: object
+    type: object
+  model.AchievementListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/model.Achievement'
+        type: array
+    type: object
+  model.AchievementMongo:
+    properties:
+      achievementRefId:
+        type: string
+      achievementType:
+        type: string
+      attachments:
+        items:
+          $ref: '#/definitions/model.Attachment'
+        type: array
+      createdAt:
+        type: string
+      description:
+        type: string
+      details:
+        additionalProperties: true
+        type: object
+      id:
+        type: string
+      points:
+        type: integer
+      studentId:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+      title:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  model.AchievementRejectRequest:
+    properties:
+      note:
+        example: Bukti kurang jelas
+        type: string
+    type: object
+  model.AchievementStatistics:
+    properties:
+      filtered_students:
+        type: integer
+      level_distribution:
+        items:
+          $ref: '#/definitions/model.CountByKey'
+        type: array
+      scope:
+        description: '"all" / "student" / "advisees"'
+        type: string
+      top_students:
+        items:
+          $ref: '#/definitions/model.TopStudent'
+        type: array
+      total_per_period:
+        items:
+          $ref: '#/definitions/model.CountByKey'
+        type: array
+      total_per_type:
+        items:
+          $ref: '#/definitions/model.CountByKey'
+        type: array
+    type: object
+  model.AchievementUpsertRequest:
+    properties:
+      achievementType:
+        example: competition
+        type: string
+      description:
+        example: Menang lomba tingkat nasional
+        type: string
+      details:
+        additionalProperties: true
+        type: object
+      points:
+        example: 50
+        type: integer
+      tags:
+        example:
+        - '["UI"'
+        - '"UX"]'
+        items:
+          type: string
+        type: array
+      title:
+        example: Juara 1 Lomba UI/UX
+        type: string
+    type: object
+  model.AdviseeListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/model.Student'
+        type: array
+    type: object
+  model.Attachment:
+    properties:
+      fileName:
+        type: string
+      fileType:
+        type: string
+      fileUrl:
+        type: string
+      uploadedAt:
+        type: string
+    type: object
+  model.AttachmentResponse:
+    properties:
+      data:
+        $ref: '#/definitions/model.Attachment'
+    type: object
+  model.AuthErrorResponse:
+    properties:
+      message:
+        example: invalid username or password
+        type: string
+      status:
+        example: error
+        type: string
+    type: object
+  model.AuthUnauthorizedResponse:
+    properties:
+      message:
+        example: unauthorized
+        type: string
+      status:
+        example: error
+        type: string
+    type: object
+  model.AuthUser:
+    properties:
+      fullName:
+        example: Administrator
+        type: string
+      id:
+        example: 62d58c69-e469-4acb-98bf-4fd4a881c0d0
+        type: string
+      permissions:
+        example:
+        - achievement:create
+        - achievement:read
+        - achievement:update
+        - achievement:delete
+        - achievement:verify
+        - user:manage
+        items:
+          type: string
+        type: array
+      role:
+        example: Admin
+        type: string
+      username:
+        example: admin
+        type: string
+    type: object
+  model.CountByKey:
+    properties:
+      key:
+        type: string
+      total:
+        type: integer
+    type: object
+  model.ErrorResponse:
+    properties:
+      message:
+        example: failed to fetch achievements
+        type: string
+    type: object
+  model.Lecturer:
+    properties:
+      created_at:
+        type: string
+      department:
+        type: string
+      email:
+        type: string
+      full_name:
+        description: join field
+        type: string
+      id:
+        type: string
+      lecturer_id:
+        type: string
+      user_id:
+        type: string
+    type: object
+  model.LecturerListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/model.Lecturer'
+        type: array
+    type: object
+  model.LoginRequest:
+    properties:
+      password:
+        example: admin123
+        type: string
+      username:
+        example: admin
+        type: string
+    type: object
+  model.LoginResponse:
+    properties:
+      data:
+        $ref: '#/definitions/model.LoginResponseData'
+      status:
+        example: success
+        type: string
+    type: object
+  model.LoginResponseData:
+    properties:
+      refreshToken:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+      token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+      user:
+        $ref: '#/definitions/model.AuthUser'
+    type: object
+  model.LogoutResponse:
+    properties:
+      data:
+        $ref: '#/definitions/model.LogoutResponseData'
+      status:
+        example: success
+        type: string
+    type: object
+  model.LogoutResponseData:
+    properties:
+      message:
+        example: logout success
+        type: string
+    type: object
+  model.MessageResponse:
+    properties:
+      message:
+        example: success
+        type: string
+    type: object
+  model.ProfileResponse:
+    properties:
+      data:
+        $ref: '#/definitions/model.ProfileResponseData'
+      status:
+        example: success
+        type: string
+    type: object
+  model.ProfileResponseData:
+    properties:
+      user:
+        $ref: '#/definitions/model.AuthUser'
+    type: object
+  model.RefreshRequest:
+    properties:
+      refreshToken:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+    type: object
+  model.RefreshResponse:
+    properties:
+      data:
+        $ref: '#/definitions/model.RefreshResponseData'
+      status:
+        example: success
+        type: string
+    type: object
+  model.RefreshResponseData:
+    properties:
+      refreshToken:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+      token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+    type: object
+  model.ReportStatisticsResponse:
+    properties:
+      data:
+        $ref: '#/definitions/model.AchievementStatistics'
+    type: object
+  model.ReportStudentResponse:
+    properties:
+      data:
+        $ref: '#/definitions/model.AchievementStatistics'
+    type: object
+  model.Student:
+    properties:
+      academic_year:
+        type: string
+      advisor_id:
+        type: string
+      created_at:
+        type: string
+      email:
+        type: string
+      full_name:
+        description: join field
+        type: string
+      id:
+        type: string
+      program_study:
+        type: string
+      student_id:
+        type: string
+      user_id:
+        type: string
+    type: object
+  model.StudentAchievementListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/model.Achievement'
+        type: array
+    type: object
+  model.StudentDetailResponse:
+    properties:
+      data:
+        $ref: '#/definitions/model.Student'
+    type: object
+  model.StudentListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/model.Student'
+        type: array
+    type: object
+  model.StudentSetAdvisorRequest:
+    properties:
+      advisor_id:
+        example: b5a2c9f6-1e7b-4b6c-8b0a-6c9c7d2b0f11
+        type: string
+    type: object
+  model.TopStudent:
+    properties:
+      points:
+        type: integer
+      student_id:
+        type: string
+      total:
+        type: integer
+    type: object
+  model.User:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      full_name:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      role_id:
+        type: string
+      role_name:
+        type: string
+      updated_at:
+        type: string
+      username:
+        type: string
+    type: object
+  model.UserAssignRoleRequest:
+    properties:
+      roleName:
+        example: Mahasiswa
+        type: string
+    type: object
+  model.UserCreateRequest:
+    properties:
+      email:
+        example: admin1@mail.com
+        type: string
+      full_name:
+        example: Admin Satu
+        type: string
+      password:
+        example: admin123
+        type: string
+      roleName:
+        description: Admin | Mahasiswa | Dosen Wali
+        example: Admin
+        type: string
+      username:
+        example: admin1
+        type: string
+    type: object
+  model.UserCreateResponse:
+    properties:
+      data:
+        properties:
+          id:
+            example: 62d58c69-e469-4acb-98bf-4fd4a881c0d0
+            type: string
+        type: object
+    type: object
+  model.UserDetailResponse:
+    properties:
+      data:
+        $ref: '#/definitions/model.User'
+    type: object
+  model.UserListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/model.User'
+        type: array
+    type: object
+  model.UserUpdateRequest:
+    properties:
+      email:
+        example: admin2@mail.com
+        type: string
+      full_name:
+        example: Admin Dua
+        type: string
+      is_active:
+        example: true
+        type: boolean
+      username:
+        example: admin2
+        type: string
+    type: object
+host: localhost:3000
+info:
+  contact: {}
+  description: Dokumentasi API Sistem Pelaporan Prestasi Mahasiswa
+  title: Sistem Pelaporan Prestasi Mahasiswa API
+  version: "1.0"
+paths:
+  /achievements:
+    get:
+      description: 'Admin: semua. Mahasiswa: miliknya. Dosen Wali: mahasiswa bimbingan.'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.AchievementListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List achievements
+      tags:
+      - Achievements
+    post:
+      consumes:
+      - application/json
+      description: Mahasiswa membuat prestasi -> draft. Mongo dibuat dulu lalu Postgres
+        reference dibuat.
+      parameters:
+      - description: Create payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.AchievementUpsertRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.AchievementCreateResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create achievement (draft)
+      tags:
+      - Achievements
+  /achievements/{id}:
+    delete:
+      parameters:
+      - description: Achievement ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.MessageResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete achievement (draft only, soft delete)
+      tags:
+      - Achievements
+    get:
+      parameters:
+      - description: Achievement ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.AchievementDetailResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get achievement detail
+      tags:
+      - Achievements
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Achievement ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.AchievementUpsertRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update achievement (draft only)
+      tags:
+      - Achievements
+  /achievements/{id}/attachments:
+    post:
+      consumes:
+      - multipart/form-data
+      parameters:
+      - description: Achievement ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Attachment file
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.AttachmentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Upload attachment (draft only)
+      tags:
+      - Achievements
+  /achievements/{id}/history:
+    get:
+      parameters:
+      - description: Achievement ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.AchievementHistoryResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get achievement history (implicit)
+      tags:
+      - Achievements
+  /achievements/{id}/reject:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Achievement ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Reject payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.AchievementRejectRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Reject achievement (submitted -> rejected)
+      tags:
+      - Achievements
+  /achievements/{id}/submit:
+    post:
+      parameters:
+      - description: Achievement ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.MessageResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Submit achievement (draft -> submitted)
+      tags:
+      - Achievements
+  /achievements/{id}/verify:
+    post:
+      parameters:
+      - description: Achievement ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.MessageResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Verify achievement (submitted -> verified)
+      tags:
+      - Achievements
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Login pakai username atau email + password, return access token
+        + refresh token
+      parameters:
+      - description: Login payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.AuthErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.AuthErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.AuthErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.AuthErrorResponse'
+      summary: Login
+      tags:
+      - Auth
+  /auth/logout:
+    post:
+      description: Stateless logout (server tidak revoke token). Client wajib hapus
+        token.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.LogoutResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.AuthUnauthorizedResponse'
+      security:
+      - BearerAuth: []
+      summary: Logout
+      tags:
+      - Auth
+  /auth/profile:
+    get:
+      description: Ambil data user dari access token (Bearer)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.ProfileResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.AuthUnauthorizedResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.AuthErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.AuthErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get current profile
+      tags:
+      - Auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Tukar refresh token jadi access token baru + refresh token baru
+        (stateless)
+      parameters:
+      - description: Refresh payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.RefreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.RefreshResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.AuthErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.AuthErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.AuthErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.AuthErrorResponse'
+      summary: Refresh token
+      tags:
+      - Auth
+  /lecturers:
+    get:
+      description: Ambil daftar dosen (pagination)
+      parameters:
+      - default: 50
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.LecturerListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.AuthUnauthorizedResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List lecturers
+      tags:
+      - Lecturers
+  /lecturers/{id}/advisees:
+    get:
+      description: Ambil daftar mahasiswa bimbingan dari dosen (by lecturer id)
+      parameters:
+      - description: Lecturer ID (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: 50
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.AdviseeListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.AuthUnauthorizedResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List advisees
+      tags:
+      - Lecturers
+  /reports/statistics:
+    get:
+      description: 'Statistik prestasi. Scope otomatis berdasarkan role: Admin=all,
+        Mahasiswa=student, Dosen Wali=advisees'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.ReportStatisticsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.AuthUnauthorizedResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get achievement statistics
+      tags:
+      - Reports
+  /reports/students/{id}:
+    get:
+      description: Statistik prestasi untuk 1 student (berdasarkan studentId)
+      parameters:
+      - description: Student ID (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.ReportStudentResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.AuthUnauthorizedResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get student report
+      tags:
+      - Reports
+  /students:
+    get:
+      description: Ambil daftar mahasiswa (pagination)
+      parameters:
+      - default: 50
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.StudentListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.AuthUnauthorizedResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List students
+      tags:
+      - Students
+  /students/{id}:
+    get:
+      description: Ambil detail mahasiswa by id
+      parameters:
+      - description: Student ID (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.StudentDetailResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.AuthUnauthorizedResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get student detail
+      tags:
+      - Students
+  /students/{id}/achievements:
+    get:
+      description: Ambil list prestasi milik student by studentId (uuid)
+      parameters:
+      - description: Student ID (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: 50
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.StudentAchievementListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.AuthUnauthorizedResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List student achievements
+      tags:
+      - Students
+  /students/{id}/advisor:
+    put:
+      consumes:
+      - application/json
+      description: Set dosen wali untuk mahasiswa (advisor_id = lecturers.id)
+      parameters:
+      - description: Student ID (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.StudentSetAdvisorRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.AuthUnauthorizedResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Set student advisor
+      tags:
+      - Students
+  /users:
+    get:
+      description: List user (admin management). Bisa search via q
+      parameters:
+      - description: Search by username/email/full_name
+        in: query
+        name: q
+        type: string
+      - default: 50
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.UserListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.AuthUnauthorizedResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List users
+      tags:
+      - Users
+    post:
+      consumes:
+      - application/json
+      description: Buat user baru + set role
+      parameters:
+      - description: Request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.UserCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.UserCreateResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.AuthUnauthorizedResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create user
+      tags:
+      - Users
+  /users/{id}:
+    delete:
+      description: Soft delete user (set is_active=false)
+      parameters:
+      - description: User ID (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.MessageResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.AuthUnauthorizedResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Deactivate user
+      tags:
+      - Users
+    get:
+      description: Detail user by id
+      parameters:
+      - description: User ID (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.UserDetailResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.AuthUnauthorizedResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get user detail
+      tags:
+      - Users
+    put:
+      consumes:
+      - application/json
+      description: Update sebagian field (partial update) via COALESCE
+      parameters:
+      - description: User ID (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.UserUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.AuthUnauthorizedResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update user
+      tags:
+      - Users
+  /users/{id}/role:
+    put:
+      consumes:
+      - application/json
+      description: Ganti role user berdasarkan roleName
+      parameters:
+      - description: User ID (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Request body
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.UserAssignRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/model.AuthUnauthorizedResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Assign role
+      tags:
+      - Users
+schemes:
+- http
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
